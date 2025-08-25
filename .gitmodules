@@ -1,0 +1,3 @@
+[submodule "graph-baselines"]
+	path = graph-baselines
+	url = https://github.com/NTU-Siqiang-Group/graph-baselines.git
