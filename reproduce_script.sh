@@ -3,6 +3,8 @@
 
 ## Environment Setup
 preparation(){
+    git submodule update --init --recursive
+
     pip install numpy
     pip3 install numpy
     conda create -y -n py27 python=2.7
@@ -20,6 +22,12 @@ preparation(){
     sudo apt-get install gnuplot
     sudo apt-get install gnuplot-x11
     sudo apt install r-base
+
+    sudo apt-get install -y libjemalloc2
+    export LD_PRELOAD="$(
+    ( /sbin/ldconfig -p 2>/dev/null || /usr/sbin/ldconfig -p 2>/dev/null || ldconfig -p ) \
+    | awk '/libjemalloc\.so(\.|$)/{print $4; exit}'
+    )"
 }
 
 datasets=("dblp" "wikipedia" "orkut" "twitter")
@@ -33,10 +41,24 @@ gen_figure_6(){
         cd graph-baselines
         ./fig6.sh $dataset
         cd ..
-        cp graph-baselines/fig6.dat results/figure_6/{$dataset}_raw.dat
-        python3 results/figure_6/parse_data.py $dataset
+        cd AsterDB
+        ./fig6.sh $dataset
+        RAW="fig6_raw.dat"
+        OUT="../graph-baselines/fig6.dat"
+        awk '
+        function norm(x,  lx){ lx=tolower(x); return (lx=="nan"||lx=="inf"||lx=="+inf"||lx=="-inf") ? 0 : x }
+        {
+        if (match($0, /get:[[:space:]]*([0-9.+-eE]+)/, mg)) { g = norm(mg[1]); have_g=1 }
+        if (match($0, /add:[[:space:]]*([0-9.+-eE]+)/, ma)) { a = norm(ma[1]); have_a=1 }
+        if (have_g && have_a) { printf("aster,%.2f,%.2f\n", g, a); have_g=have_a=0 }
+        }
+        ' "$RAW" >> "$OUT"
+        cd ..
+
+        cp graph-baselines/fig6.dat results/figure_6/${dataset}_raw.dat
         cd results/figure_6
-        gnuplot plot_$dataset.gnu
+        python3 ../../plot/throughput/parse_data.py --input ${dataset}_raw.dat --output ${dataset}.dat
+        gnuplot ../../plot/throughput/plot_$dataset.gnu
         cd ../..
     done
 }

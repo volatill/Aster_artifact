@@ -8,16 +8,18 @@ def parse_args():
     ap = argparse.ArgumentParser(description="Convert dblp_raw.dat to dblp.dat")
     ap.add_argument("--input", "-i", default="dblp_raw.dat", help="raw input file")
     ap.add_argument("--output", "-o", default="dblp.dat", help="output dat file")
-    ap.add_argument("--precision", type=int, default=10, help="decimal places for numbers")
+    ap.add_argument("--precision", type=int, default=8, help="decimal places for numbers")
     return ap.parse_args()
 
 
 ENGINE_ORDER = [
+    "aster",               
     "gremlin-neo4j-tp3",   # Neo4j
     "gremlin-orientdb",    # OrientDB
     "gremlin-arangodb",    # ArangoDB
     "gremlin-pg",          # SQLG
     "gremlin-janusgraph",  # JanusGraph
+    "nebulagraph",  # NebulaGraph
 ]
 
 RATIOS = [i / 10.0 for i in range(1, 10)]  # 0.1 .. 0.9
@@ -32,9 +34,6 @@ def safe_float(x: str):
         return None
 
 def throughput_ops_per_sec(ratio: float, read_us: float, write_us: float) -> float:
-    """
-    1 / (加权平均延迟)；单位换算：微秒 -> 秒
-    """
     if read_us is None or write_us is None:
         return 0.0
     # nan / inf 

@@ -1,3 +1,9 @@
 [submodule "graph-baselines"]
 	path = graph-baselines
 	url = https://github.com/NTU-Siqiang-Group/graph-baselines.git
+[submodule "graph-baseline-ext"]
+	path = graph-baseline-ext
+	url = https://github.com/NTU-Siqiang-Group/graph-baseline-ext.git
+[submodule "AsterDB"]
+	path = AsterDB
+	url = https://github.com/NTU-Siqiang-Group/AsterDB.git
