@@ -97,5 +97,35 @@ gen_figure_9(){
 
 }
 
+usage() {
+  cat <<EOF
+Usage: $0 [setup] [figure_6] [figure_7] [figure_8] [figure_9]
+- No args: run figure_6, figure_7, figure_8, figure_9 in order.
+- You can also pass one or multiple targets, e.g.: $0 setup figure_6
+EOF
+}
 
-mkdir results
+main() {
+  mkdir -p results
+
+  if [[ $# -eq 0 ]]; then
+    gen_figure_6
+    gen_figure_7
+    gen_figure_8
+    gen_figure_9
+    exit 0
+  fi
+
+  for arg in "$@"; do
+    case "$arg" in
+      setup)     preparation ;;
+      figure_6)  gen_figure_6 ;;
+      figure_7)  gen_figure_7 ;;
+      figure_8)  gen_figure_8 ;;
+      figure_9)  gen_figure_9 ;;
+      *)         echo "[ERROR] unknown target: $arg"; usage; exit 1 ;;
+    esac
+  done
+}
+
+main "$@"
