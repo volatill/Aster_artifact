@@ -67,17 +67,95 @@ gen_figure_7(){
     mkdir results/figure_7
     rm -rf results/figure_7/*.dat
     echo "Figure 7:"
-
+    queries=(get_neighbors add_vertex add_edge del_edge)
+    for query in "${queries[@]}"; do
+     echo "Dataset	Neo4j	ArangoDB	PostgreSQL	OrientDB	JanusGraph	NebulaGraph	AsterDB" > results/figure_7/${query}.dat
+    done
     for dataset in "${datasets[@]}"; do
         cd graph-baselines
-        ./fig6.sh $dataset
+        ./fig7.sh $dataset
         cd ..
-        cp graph-baselines/fig7.dat results/figure_7/$dataset.dat
+        cp graph-baselines/fig7.dat results/figure_7/${dataset}_raw.dat
+
+        outdir="results/figure_7"
+        case "$dataset" in
+          dblp|DBLP)          ds_name="DBLP" ;;
+          wikipedia|Wiki*)    ds_name="Wikipedia" ;;
+          orkut|Orkut)        ds_name="Orkut" ;;
+          twitter|Twitter)    ds_name="Twitter" ;;   # change to "Twitch" if that’s your dataset
+          *)                  ds_name="$dataset" ;;
+        esac
+
+        # ensure headers exist once per method file
+        ensure_header() {
+          local f="$1"
+          if [[ ! -s "$f" ]]; then
+            printf "Dataset\tNeo4j\tArangoDB\tPostgreSQL\tOrientDB\tJanusGraph\tNebulaGraph\tAsterDB\n" > "$f"
+          fi
+        }
+        for m in get_neighbors add_vertex add_edge del_edge; do
+          ensure_header "$outdir/$m.dat"
+        done
+
+        # parse CSV and append one row per method file
+        awk -F',' -v ds="$ds_name" -v outdir="$outdir" '
+        BEGIN {
+          OFS = "\t"
+          methods[1]="get_neighbors"; methods[2]="add_vertex"; methods[3]="add_edge"; methods[4]="del_edge";
+          # desired output column order:
+          slots[1]="Neo4j"; slots[2]="ArangoDB"; slots[3]="PostgreSQL"; slots[4]="OrientDB"; slots[5]="JanusGraph"; slots[6]="NebulaGraph"; slots[7]="AsterDB";
+        }
+        NR==1 {
+          # map header names to indices
+          for (i=1; i<=NF; i++) { gsub(/^[ \t]+|[ \t]+$/, "", $i); col[$i]=i }
+          next
+        }
+        {
+          # normalize db name -> slot
+          db = $1; gsub(/^[ \t]+|[ \t]+$/, "", db)
+          dbl = tolower(db)
+          slot=""
+          if      (dbl ~ /neo4j/)           slot="Neo4j"
+          else if (dbl ~ /arangodb/)        slot="ArangoDB"
+          else if (dbl ~ /(sqlg|-pg|postgres)/) slot="PostgreSQL"
+          else if (dbl ~ /orientdb/)        slot="OrientDB"
+          else if (dbl ~ /janus/)           slot="JanusGraph"
+          else if (dbl ~ /nebula/)          slot="NebulaGraph"
+          else if (dbl ~ /aster/)           slot="AsterDB"
+          if (slot=="") next
+
+          # capture values for each method; nan -> 0
+          for (mi=1; mi<=4; mi++) {
+            m = methods[mi]
+            idx = col[m]
+            if (!idx) continue
+            v = $(idx)
+            gsub(/^[ \t]+|[ \t]+$/, "", v)
+            tl = tolower(v)
+            if (tl=="nan" || tl=="inf" || tl=="+inf" || tl=="-inf" || v=="") v=0
+            vals[m,slot] = v + 0
+          }
+        }
+        END{
+          for (mi=1; mi<=4; mi++) {
+            m = methods[mi]
+            line = ds
+            for (si=1; si<=7; si++) {
+              s = slots[si]
+              v = ((m SUBSEP s) in vals) ? vals[m,s] : 0
+              line = line OFS v
+            }
+            file = outdir "/" m ".dat"
+            print line >> file
+            close(file)
+          }
+        }
+        ' results/figure_7/${dataset}_raw.dat
+
         cd results/figure_7
         cd ../..
     done
 
-    python3 results/figure_7/parse_data.py 
     gnuplot plot1.gnu
     gnuplot plot2.gnu
 }
