@@ -156,8 +156,10 @@ gen_figure_7(){
         cd ../..
     done
 
-    gnuplot plot1.gnu
-    gnuplot plot2.gnu
+
+    cd results/figure_7
+    gnuplot ../../plot/query/plot1.gnu
+    gnuplot ../../plot/query/plot2.gnu
 }
 
 gen_figure_8(){

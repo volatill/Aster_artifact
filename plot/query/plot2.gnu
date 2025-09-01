@@ -63,7 +63,7 @@ unset ylabel
 set style fill solid border -1
 set origin 0.4765,0.2
 set size 0.52,0.8
-plot 'get.dat' using 2:xticlabels(1) title columnheader(2) lc rgb Neo4j, \
+plot 'get_neighbors.dat' using 2:xticlabels(1) title columnheader(2) lc rgb Neo4j, \
 '' using 3:xticlabels(1) title columnheader(3) lc rgb ArangoDB,\
 '' using 5:xticlabels(1) title columnheader(4) lc rgb OrientDB,\
 '' using 4:xticlabels(1) title columnheader(5) lc rgb PostgreSQL,\
@@ -74,7 +74,7 @@ plot 'get.dat' using 2:xticlabels(1) title columnheader(2) lc rgb Neo4j, \
 set origin 0.4765,0.2
 set size 0.52,0.8
 set style fill pattern border -1
-plot 'get.dat' using 2:xticlabels(1) title columnheader(2) fillstyle solid lc rgb Neo4j,\
+plot 'get_neighbors.dat' using 2:xticlabels(1) title columnheader(2) fillstyle solid lc rgb Neo4j,\
 '' using 3:xticlabels(1) title columnheader(3) fillstyle pattern 1 transparent lc rgb 'black',\
 '' using 5:xticlabels(1) title columnheader(4) fillstyle pattern 2 transparent lc rgb 'white',\
 '' using 4:xticlabels(1) title columnheader(5) fillstyle pattern 4 transparent lc rgb 'black',\
