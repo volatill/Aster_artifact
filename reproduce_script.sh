@@ -30,19 +30,19 @@ preparation(){
     )"
 }
 
-datasets=("dblp" "wikipedia" "orkut" "twitter")
+
 
 gen_figure_6(){
     mkdir results/figure_6
     rm -rf results/figure_6/*.dat
     echo "Figure 6:"
-
+    datasets=("dblp" "wikipedia" "orkut" "twitter")
     for dataset in "${datasets[@]}"; do
         cd graph-baselines
         ./fig6.sh $dataset
         cd ..
         cd AsterDB
-        ./fig6.sh $dataset
+        ./fig6.sh ${dataset} > fig6_raw.dat
         RAW="fig6_raw.dat"
         OUT="../graph-baselines/fig6.dat"
         awk '
@@ -71,6 +71,7 @@ gen_figure_7(){
     for query in "${queries[@]}"; do
      echo "Dataset	Neo4j	ArangoDB	PostgreSQL	OrientDB	JanusGraph	NebulaGraph	AsterDB" > results/figure_7/${query}.dat
     done
+    datasets=("dblp" "wikipedia" "orkut" "twitter")
     for dataset in "${datasets[@]}"; do
         cd graph-baselines
         ./fig7.sh $dataset
@@ -151,15 +152,65 @@ gen_figure_7(){
           }
         }
         ' results/figure_7/${dataset}_raw.dat
-
-        cd results/figure_7
-        cd ../..
     done
-
-
     cd results/figure_7
     gnuplot ../../plot/query/plot1.gnu
     gnuplot ../../plot/query/plot2.gnu
+    cd ../..
+
+    datasets=("ldbc" "freebase")
+    for dataset in "${datasets[@]}"; do
+      cd graph-baselines
+      ./fig7_property.sh $dataset
+      cd ..
+
+      cd AsterDB
+      ./fig7_property.sh ${dataset} > fig7_property_raw.dat
+      RAW="fig7_property_raw.dat"
+      OUT="../graph-baselines/fig7_property.dat"
+      mkdir -p "$(dirname "$OUT")"
+      awk -v out="$OUT" '
+      BEGIN {
+        OFS=",";
+        # Map operation phrase -> script filename
+        map["vertex property search"]      = "node-property-search.groovy";
+        map["edge property search"]        = "edge-specific-property-search.groovy";
+        map["update vertex property"]      = "update-node-property.groovy";
+        map["update edge property"]        = "update-edge-property.groovy";
+        map["insert vertex property"]      = "insert-node-property.groovy";
+        map["insert edge property"]        = "insert-edge-property.groovy";
+        map["remove vertex property"]      = "delete-node-property.groovy";
+        map["remove edge property"]        = "delete-edge-property.groovy";
+      }
+      {
+        # Lowercase the whole line to be case-insensitive
+        line = tolower($0)
+
+        # Extract: time of <phrase>: <number>ns
+        # Capture the phrase and numeric value (allow decimals)
+        if (match(line, /time of[[:space:]]+([^:]+):[[:space:]]*([0-9.]+)[[:space:]]*ns/, m)) {
+          key = m[1]                               # e.g. "vertex property search"
+          gsub(/^[[:space:]]+|[[:space:]]+$/, "", key)
+          script = (key in map) ? map[key] : ""
+          if (script == "") next
+
+          # ns -> microseconds
+          val_ns = m[2] + 0.0
+          val_us = val_ns
+
+          # Two decimals
+          printf("aster,%s,%.2f\n", script, val_us) >> out
+        }
+      }
+      ' "$RAW"
+
+      cp graph-baselines/fig7.dat results/figure_7/${dataset}_raw.dat
+      python3 plot/query/parse_property_data.py --dataset ${dataset}
+    done
+    cd results/figure_7
+    gnuplot ../../plot/query/plot1.gnu
+    gnuplot ../../plot/query/plot2.gnu
+    cd ../..
 }
 
 gen_figure_8(){
