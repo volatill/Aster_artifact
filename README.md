@@ -21,7 +21,7 @@ The following instructions are for reproducing the experiments we demonstrated i
 
 ## Experimentation
 
-All experiments in our paper can be runned and plotted by excuting the following command:
+Experiments in our paper can be runned and plotted by excuting the following command:
 
 ```bash
 ./reproduce_script.sh  
@@ -34,7 +34,11 @@ You can also run `reproduce_script.sh` with a specific figure you want to reprod
 
 Available parameters include `figure_6`, `figure_7`, `figure_8`, `figure_9`, and `table_6`. 
 
-Depending on system performance, preloading data on the `Twitter` dataset may take one to two days or even longer for each method.
+Note: To reproduce Figure 6(d) from our paper, please be aware that, depending on system performance, preloading data and executing experiments on the `Twitter` dataset may require few days or even longer for each method. For this reason, we have separated this case from the default workflow. To run experiments specifically on the `Twitter` dataset, please invoke the script with both parameters `figure_6` and `twitter`, as follows:
+
+```bash
+./reproduce_script.sh figure_6 twitter
+```
 
 
 ## Result

@@ -13,12 +13,6 @@ preparation(){
     conda install -y -c conda-forge subprocess32
     python -c "import subprocess32, sys; print('ok', subprocess32.__version__, sys.version)"
 
-    cd graph-baselines
-    ./build_image.sh
-    ./download_graphs.sh
-    ./prepare_data.sh
-    cd ..
-
     sudo apt-get install gnuplot
     sudo apt-get install gnuplot-x11
     sudo apt install r-base
@@ -28,6 +22,17 @@ preparation(){
     ( /sbin/ldconfig -p 2>/dev/null || /usr/sbin/ldconfig -p 2>/dev/null || ldconfig -p ) \
     | awk '/libjemalloc\.so(\.|$)/{print $4; exit}'
     )"
+
+    cd graph-baseline-ext
+    ./build_duckdb.sh
+    ./build_umbra.sh
+    cd ..
+
+    cd graph-baselines
+    ./build_image.sh
+    ./download_graphs.sh
+    ./prepare_data.sh
+    cd ..
 }
 
 
@@ -36,7 +41,37 @@ gen_figure_6(){
     mkdir results/figure_6
     rm -rf results/figure_6/*.dat
     echo "Figure 6:"
-    datasets=("dblp" "wikipedia" "orkut" "twitter")
+    datasets=("dblp" "wikipedia" "orkut")
+    for dataset in "${datasets[@]}"; do
+        cd graph-baselines
+        ./fig6.sh $dataset
+        cd ..
+        cd AsterDB
+        ./fig6.sh ${dataset} > fig6_raw.dat
+        RAW="fig6_raw.dat"
+        OUT="../graph-baselines/fig6.dat"
+        awk '
+        function norm(x,  lx){ lx=tolower(x); return (lx=="nan"||lx=="inf"||lx=="+inf"||lx=="-inf") ? 0 : x }
+        {
+        if (match($0, /get:[[:space:]]*([0-9.+-eE]+)/, mg)) { g = norm(mg[1]); have_g=1 }
+        if (match($0, /add:[[:space:]]*([0-9.+-eE]+)/, ma)) { a = norm(ma[1]); have_a=1 }
+        if (have_g && have_a) { printf("aster,%.2f,%.2f\n", g, a); have_g=have_a=0 }
+        }
+        ' "$RAW" >> "$OUT"
+        cd ..
+
+        cp graph-baselines/fig6.dat results/figure_6/${dataset}_raw.dat
+        cd results/figure_6
+        python3 ../../plot/throughput/parse_data.py --input ${dataset}_raw.dat --output ${dataset}.dat
+        gnuplot ../../plot/throughput/plot_$dataset.gnu
+        cd ../..
+    done
+}
+
+gen_figure_6_twitter(){
+  mkdir results/figure_6
+  echo "Figure 6(d):"
+    datasets=("twitter")
     for dataset in "${datasets[@]}"; do
         cd graph-baselines
         ./fig6.sh $dataset
@@ -71,11 +106,37 @@ gen_figure_7(){
     for query in "${queries[@]}"; do
      echo "Dataset	Neo4j	ArangoDB	PostgreSQL	OrientDB	JanusGraph	NebulaGraph	AsterDB" > results/figure_7/${query}.dat
     done
-    datasets=("dblp" "wikipedia" "orkut" "twitter")
+    datasets=("dblp" "twitch" "wikipedia" "orkut")
     for dataset in "${datasets[@]}"; do
         cd graph-baselines
         ./fig7.sh $dataset
         cd ..
+        cd AsterDB
+        ./fig7.sh ${dataset} > fig7_raw.dat
+        RAW="fig7_raw.dat"
+        OUT="../graph-baselines/fig7.dat"
+        awk -v out="$OUT" '
+        BEGIN {
+          # defaults (if a key is missing, we print 0.00)
+          getv = addv = adde = dele = 0.0
+        }
+        {
+          line = tolower($0)
+
+          # Each time we see a match, we overwrite: the last block wins
+          if (match(line, /^get[[:space:]]*avg:[[:space:]]*([0-9.]+)/, m))   { getv = m[1] + 0.0 }
+          if (match(line, /^addv[[:space:]]*avg:[[:space:]]*([0-9.]+)/, m))  { addv = m[1] + 0.0 }
+          if (match(line, /^adde[[:space:]]*avg:[[:space:]]*([0-9.]+)/, m))  { adde = m[1] + 0.0 }
+          if (match(line, /^dele[[:space:]]*avg:[[:space:]]*([0-9.]+)/, m))  { dele = m[1] + 0.0 }
+        }
+        END {
+          # Map: get -> get_neighbors, addv -> add_vertex, adde -> add_edge, dele -> del_edge
+          # Two decimals to match your fig7.dat style
+          printf("aster,%.2f,%.2f,%.2f,%.2f\n", getv, addv, adde, dele) >> out
+        }
+        ' "$RAW"
+        cd ..
+
         cp graph-baselines/fig7.dat results/figure_7/${dataset}_raw.dat
 
         outdir="results/figure_7"
@@ -83,7 +144,7 @@ gen_figure_7(){
           dblp|DBLP)          ds_name="DBLP" ;;
           wikipedia|Wiki*)    ds_name="Wikipedia" ;;
           orkut|Orkut)        ds_name="Orkut" ;;
-          twitter|Twitter)    ds_name="Twitter" ;;   # change to "Twitch" if that’s your dataset
+          twitch|Twitch)    ds_name="Twitch" ;;   # change to "Twitch" if that’s your dataset
           *)                  ds_name="$dataset" ;;
         esac
 
@@ -217,15 +278,102 @@ gen_figure_8(){
     mkdir results/figure_8
     rm -rf results/figure_8/*.dat
     echo "Figure 8:"
+    set -euo pipefail
+    datasets=("wikipedia" "orkut")
+    for dataset in "${datasets[@]}"; do
+      cd AsterDB
+      ./fig8.sh $dataset
+      cd ..
+      cp AsterDB/fig8_raw.dat results/figure_8/${dataset}_raw.dat
+      RAW="results/figure_8/${dataset}_raw.dat"
+      OUT="results/figure_8/${dataset}.dat"
+      mkdir -p "$(dirname "$OUT")"
+      : > "$OUT" 
 
+      LC_ALL=C awk -v out="$OUT" '
+      BEGIN{
+        OFS="\t"
+        # fixed ratios to emit
+        for(i=1;i<=9;i++) R[i]=i/10.0
+      }
+      {
+        line=$0
+
+        # track current update policy
+        if (match(line,/using update policy:[[:space:]]*([0-9]+)/,m)) {
+          pol = m[1] + 0
+          next
+        }
+
+        # track current ratio from rops/wops
+        if (match(line,/rops:[[:space:]]*([0-9]+)[[:space:]]+wops:[[:space:]]*([0-9]+)/,m)) {
+          rops = m[1] + 0
+          wops = m[2] + 0
+          total = rops + wops
+          if (total > 0) {
+            r = rops / total
+            rkey = sprintf("%.1f", r)    # e.g. 0.1 .. 0.9
+          } else { rkey="" }
+          next
+        }
+
+        # compute throughput at current (policy, ratio)
+        if (match(line,/get:[[:space:]]*([0-9.]+),[[:space:]]*add:[[:space:]]*([0-9.]+)/,m)) {
+          if (rkey == "" || pol == "") next
+          get_us = m[1] + 0.0
+          add_us = m[2] + 0.0
+          rr = rkey + 0.0
+          L = rr*get_us + (1.0-rr)*add_us
+          thr = (L > 0 ? 1000000.0 / L : 0.0)
+
+          key = pol ":" rkey
+          THR[key] = thr
+          # track row-wise max per ratio
+          if (!(rkey in RMAX) || thr > RMAX[rkey]) RMAX[rkey] = thr
+        }
+      }
+      END{
+        for (i=1;i<=9;i++){
+          rkey = sprintf("%.1f", R[i])
+          rowmax = (rkey in RMAX ? RMAX[rkey] : 0)
+
+          # raw values per policy (default 0)
+          v2 = (("2:" rkey) in THR ? THR["2:" rkey] : 0)
+          v1 = (("1:" rkey) in THR ? THR["1:" rkey] : 0)
+          v0 = (("0:" rkey) in THR ? THR["0:" rkey] : 0)
+
+          # normalize by row max (if any)
+          if (rowmax > 0) {
+            n2 = v2 / rowmax
+            n1 = v1 / rowmax
+            n0 = v0 / rowmax
+          } else {
+            n2 = n1 = n0 = 0
+          }
+
+          printf("%.1f\t%.9f\t%.9f\t%.9f\t0\n", R[i], n2, n1, n0) >> out
+        }
+      }
+      ' "$RAW"
+      echo "[OK] Wrote $OUT"
+      cd results/figure_8
+      gnuplot ../../plot/robustness/plot_$dataset.gnu
+      cd ../..
+    done
 }
 
 gen_figure_9(){
     mkdir results/figure_9
     rm -rf results/figure_9/*.dat
     echo "Figure 9:"
-
-
+    cd AsterDB
+    ./fig9.sh $dataset > fig9_raw.dat
+    cd ..
+    cd graph-baseline-ext/duckdb
+    ./fig9.sh $dataset > fig9_raw.dat
+    cd ../..
+    cp AsterDB/fig9_raw.dat results/figure_9/aster.dat
+    cp graph-baseline-ext/duckdb/fig9_raw.dat results/figure_9/duckdb.dat
 }
 
 usage() {
@@ -238,6 +386,11 @@ EOF
 
 main() {
   mkdir -p results
+
+  if [[ "$#" -eq 2 ]] && { { [[ "$1" == "figure_6" && "$2" == "twitter" ]]; } || { [[ "$1" == "twitter" && "$2" == "figure_6" ]]; }; }; then
+    gen_figure_6_twitter
+    exit 0
+  fi
 
   if [[ $# -eq 0 ]]; then
     gen_figure_6
