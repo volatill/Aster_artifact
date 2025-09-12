@@ -31,7 +31,10 @@ preparation(){
     cd graph-baselines
     ./build_image.sh
     ./download_graphs.sh
-    ./prepare_data.sh
+    datasets=("dblp" "wikipedia" "orkut", "twitch" "cit-patents" "wiki-talk")
+    for dataset in "${datasets[@]}"; do
+      ./prepare_data.sh dataset
+    done
     cd ..
 }
 
@@ -69,9 +72,12 @@ gen_figure_6(){
 }
 
 gen_figure_6_twitter(){
-  mkdir results/figure_6
-  echo "Figure 6(d):"
+    mkdir results/figure_6
+    echo "Figure 6(d):"
     datasets=("twitter")
+    cd graph-baselines
+    ./prepare_data.sh twitter
+    cd ..
     for dataset in "${datasets[@]}"; do
         cd graph-baselines
         ./fig6.sh $dataset
@@ -367,18 +373,57 @@ gen_figure_9(){
     rm -rf results/figure_9/*.dat
     echo "Figure 9:"
     cd AsterDB
-    ./fig9.sh $dataset > fig9_raw.dat
+    ./fig9.sh > fig9_raw.dat
     cd ..
+
     cd graph-baseline-ext/duckdb
-    ./fig9.sh $dataset > fig9_raw.dat
+    ./fig9.sh > fig9_raw.dat
     cd ../..
+
+    cd graph-baseline-ext/umbra
+    docker run -v umbra-db:/var/db -p 5432:5432 --ulimit nofile=1048576:1048576 --ulimit memlock=8388608:8388608 umbradb/umbra:latest
+    ./load_data.sh
+    ./fig9.sh > fig9_raw.dat
+    cd ../..
+
     cp AsterDB/fig9_raw.dat results/figure_9/aster.dat
     cp graph-baseline-ext/duckdb/fig9_raw.dat results/figure_9/duckdb.dat
+    cp graph-baseline-ext/umbra/fig9_raw.dat results/figure_9/umbra.dat
+}
+
+gen_table_6() {
+    mkdir results/table_6
+    rm -rf results/table_6/*.dat
+    datasets=("cit-patents" "wiki-talk")
+    for dataset in "${datasets[@]}"; do
+        cd graph-baselines
+        ./tab6.sh $dataset
+        cd ..
+        cd AsterDB
+        ./tab6.sh ${dataset} > tab6_raw.dat
+        RAW="tab6_raw.dat"
+        OUT="../graph-baselines/tab6.dat"
+        awk '
+        function norm(x,  lx){ lx=tolower(x); return (lx=="nan"||lx=="inf"||lx=="+inf"||lx=="-inf") ? 0 : x }
+        {
+        if (match($0, /get:[[:space:]]*([0-9.+-eE]+)/, mg)) { g = norm(mg[1]); have_g=1 }
+        if (match($0, /add:[[:space:]]*([0-9.+-eE]+)/, ma)) { a = norm(ma[1]); have_a=1 }
+        if (have_g && have_a) { printf("aster,%.2f,%.2f\n", g, a); have_g=have_a=0 }
+        }
+        ' "$RAW" >> "$OUT"
+        cd ..
+
+        cp graph-baselines/fig6.dat results/figure_6/${dataset}_results.dat
+        # cd results/table_6
+        # # python3 ../../plot/throughput/parse_data.py --input ${dataset}_raw.dat --output ${dataset}.dat
+        # # gnuplot ../../plot/throughput/plot_$dataset.gnu
+        # cd ../..
+    done
 }
 
 usage() {
   cat <<EOF
-Usage: $0 [setup] [figure_6] [figure_7] [figure_8] [figure_9]
+Usage: $0 [setup] [figure_6] [figure_7] [figure_8] [figure_9] [table_6]
 - No args: run figure_6, figure_7, figure_8, figure_9 in order.
 - You can also pass one or multiple targets, e.g.: $0 setup figure_6
 EOF
@@ -397,6 +442,7 @@ main() {
     gen_figure_7
     gen_figure_8
     gen_figure_9
+    gen_table_6
     exit 0
   fi
 
@@ -407,6 +453,7 @@ main() {
       figure_7)  gen_figure_7 ;;
       figure_8)  gen_figure_8 ;;
       figure_9)  gen_figure_9 ;;
+      table_6)  gen_table_6 ;;
       *)         echo "[ERROR] unknown target: $arg"; usage; exit 1 ;;
     esac
   done
