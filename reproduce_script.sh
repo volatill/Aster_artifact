@@ -4,6 +4,9 @@
 ## Environment Setup
 preparation(){
     git submodule update --init --recursive
+    cd AsterDB
+    git submodule update --init --recursive
+    cd ..
 
     pip install numpy
     pip3 install numpy
@@ -24,16 +27,16 @@ preparation(){
     )"
 
     cd graph-baseline-ext
-    ./build_duckdb.sh
-    ./build_umbra.sh
+    bash ./build_duckdb.sh
+    bash ./build_umbra.sh
     cd ..
 
     cd graph-baselines
     ./build_image.sh
-    ./download_graphs.sh
+    bash ./download_graphs.sh
     datasets=("dblp" "wikipedia" "orkut", "twitch" "cit-patents" "wiki-talk")
     for dataset in "${datasets[@]}"; do
-      ./prepare_data.sh dataset
+      ./prepare_data.sh $dataset
     done
     cd ..
 }
