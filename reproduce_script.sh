@@ -32,6 +32,17 @@ preparation(){
     cd ..
 
     cd AsterDB
+    export USER_HOME_PATH=${PWD}
+    sudo apt-get update
+    sudo apt-get install g++-10 make libboost-all-dev -y
+    sudo rm /usr/bin/g++
+    sudo ln -s /usr/bin/g++-10 /usr/bin/g++
+    sudo apt-get install openjdk-11-jdk
+    export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+    sudo mkdir /usr/local/maven/
+    mkdir $USER_HOME_PATH/.m2/ && mkdir $USER_HOME_PATH/.m2/repository
+    wget https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.9/apache-maven-3.9.9-bin.tar.gz
+    sudo tar -xvzf apache-maven-3.9.9-bin.tar.gz -C /usr/local/maven
     bash ./build_db.sh
     cd ..
 
