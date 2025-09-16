@@ -31,6 +31,10 @@ preparation(){
     bash ./build_umbra.sh
     cd ..
 
+    cd AsterDB
+    bash ./build_db.sh
+    cd ..
+
     cd graph-baselines
     ./build_image.sh
     bash ./download_graphs.sh
