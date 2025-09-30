@@ -306,7 +306,7 @@ gen_figure_8(){
     datasets=("wikipedia" "orkut")
     for dataset in "${datasets[@]}"; do
       cd AsterDB
-      ./fig8.sh $dataset
+      ./fig8.sh $dataset > fig8_raw.dat
       cd ..
       cp AsterDB/fig8_raw.dat results/figure_8/${dataset}_raw.dat
       RAW="results/figure_8/${dataset}_raw.dat"
