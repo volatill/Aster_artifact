@@ -3,6 +3,8 @@
 
 ## Environment Setup
 preparation(){
+    git config --global url."https://github.com/".insteadOf git@github.com:
+    git submodule sync --recursive
     git submodule update --init --recursive
     cd AsterDB
     git submodule update --init --recursive
