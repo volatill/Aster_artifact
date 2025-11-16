@@ -2,6 +2,16 @@
 ## Instructions for running Aster experiments
 
 ## Environment Setup
+numpy_install(){
+  source "$(conda info --base)/etc/profile.d/conda.sh"
+  conda activate py27
+
+  conda install -y numpy
+  python3 -m pip install numpy
+
+  python3 -c "import sys, numpy; print(sys.executable); print('numpy', numpy.__version__)"
+}
+
 preparation(){
     git config --global url."https://github.com/".insteadOf git@github.com:
     git submodule sync --recursive
@@ -474,6 +484,7 @@ main() {
       figure_8)  gen_figure_8 ;;
       figure_9)  gen_figure_9 ;;
       table_6)  gen_table_6 ;;
+      numpy) numpy_install ;;
       *)         echo "[ERROR] unknown target: $arg"; usage; exit 1 ;;
     esac
   done
