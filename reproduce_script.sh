@@ -5,10 +5,7 @@
 numpy_install(){
   source "$(conda info --base)/etc/profile.d/conda.sh"
   conda activate py27
-
-  conda install -y numpy
-  python3 -m pip install numpy
-
+  python3 -m pip install --user numpy
   python3 -c "import sys, numpy; print(sys.executable); print('numpy', numpy.__version__)"
 }
 
