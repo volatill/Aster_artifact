@@ -58,7 +58,7 @@ preparation(){
     cd graph-baselines
     ./build_image.sh
     bash ./download_graphs.sh
-    datasets=("dblp" "wikipedia" "orkut", "twitch" "cit-patents" "wiki-talk")
+    datasets=("dblp" "wikipedia" "orkut" "twitch" "cit-patents" "wiki-talk")
     for dataset in "${datasets[@]}"; do
       ./prepare_data.sh $dataset
     done
@@ -96,6 +96,7 @@ gen_figure_6(){
         gnuplot ../../plot/throughput/plot_$dataset.gnu
         cd ../..
     done
+    echo "[Success] Reproducing process of Figure 6 is completed!"
 }
 
 gen_figure_6_twitter(){
@@ -129,6 +130,7 @@ gen_figure_6_twitter(){
         gnuplot ../../plot/throughput/plot_$dataset.gnu
         cd ../..
     done
+    echo "[Success] Reproducing process of Figure 6 (Twitter) is completed!"
 }
 
 gen_figure_7(){
@@ -297,21 +299,23 @@ gen_figure_7(){
         }
       }
       ' "$RAW"
+      cd ..
 
-      cp graph-baselines/fig7.dat results/figure_7/${dataset}_raw.dat
+      cp graph-baselines/fig7_property.dat results/figure_7/${dataset}_raw.dat
       python3 plot/query/parse_property_data.py --dataset ${dataset}
     done
     cd results/figure_7
     gnuplot ../../plot/query/plot1.gnu
     gnuplot ../../plot/query/plot2.gnu
     cd ../..
+
+    echo "[Success] Reproducing process of Figure 7 is completed!"
 }
 
 gen_figure_8(){
     mkdir results/figure_8
     rm -rf results/figure_8/*.dat
     echo "Figure 8:"
-    set -euo pipefail
     datasets=("wikipedia" "orkut")
     for dataset in "${datasets[@]}"; do
       cd AsterDB
@@ -393,6 +397,8 @@ gen_figure_8(){
       gnuplot ../../plot/robustness/plot_$dataset.gnu
       cd ../..
     done
+
+    echo "[Success] Reproducing process of Figure 8 is completed!"
 }
 
 gen_figure_9(){
@@ -408,7 +414,10 @@ gen_figure_9(){
     cd ../..
 
     cd graph-baseline-ext/umbra
-    docker run -v umbra-db:/var/db -p 5432:5432 --ulimit nofile=1048576:1048576 --ulimit memlock=8388608:8388608 umbradb/umbra:latest
+    docker run -d --name umbra-bench \
+    -v umbra-db:/var/db -p 5432:5432 \
+    --ulimit nofile=1048576:1048576 --ulimit memlock=8388608:8388608 \
+    umbradb/umbra:latest
     ./load_data.sh
     ./fig9.sh > fig9_raw.dat
     cd ../..
@@ -416,6 +425,8 @@ gen_figure_9(){
     cp AsterDB/fig9_raw.dat results/figure_9/aster.dat
     cp graph-baseline-ext/duckdb/fig9_raw.dat results/figure_9/duckdb.dat
     cp graph-baseline-ext/umbra/fig9_raw.dat results/figure_9/umbra.dat
+
+    echo "[Success] Reproducing process of Figure 9 is completed!"
 }
 
 gen_table_6() {
@@ -440,12 +451,14 @@ gen_table_6() {
         ' "$RAW" >> "$OUT"
         cd ..
 
-        cp graph-baselines/fig6.dat results/figure_6/${dataset}_results.dat
+        cp graph-baselines/tab6.dat results/table_6/${dataset}_results.dat
         # cd results/table_6
         # # python3 ../../plot/throughput/parse_data.py --input ${dataset}_raw.dat --output ${dataset}.dat
         # # gnuplot ../../plot/throughput/plot_$dataset.gnu
         # cd ../..
     done
+
+    echo "[Success] Reproducing process of Table 6 is completed!"
 }
 
 usage() {
