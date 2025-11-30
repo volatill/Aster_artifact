@@ -71,7 +71,7 @@ gen_figure_6(){
     mkdir results/figure_6
     rm -rf results/figure_6/*.dat
     echo "Figure 6:"
-    datasets=("dblp" "wikipedia" "orkut")
+    datasets=("dblp" "wikipedia")
     for dataset in "${datasets[@]}"; do
         cd graph-baselines
         ./fig6.sh $dataset
@@ -141,7 +141,7 @@ gen_figure_7(){
     for query in "${queries[@]}"; do
      echo "Dataset	Neo4j	ArangoDB	PostgreSQL	OrientDB	JanusGraph	NebulaGraph	AsterDB" > results/figure_7/${query}.dat
     done
-    datasets=("dblp" "twitch" "wikipedia" "orkut")
+    datasets=("dblp" "wikipedia")
     for dataset in "${datasets[@]}"; do
         cd graph-baselines
         ./fig7.sh $dataset
@@ -257,6 +257,7 @@ gen_figure_7(){
     datasets=("ldbc" "freebase")
     for dataset in "${datasets[@]}"; do
       cd graph-baselines
+      ./prepare_data.sh $dataset
       ./fig7_property.sh $dataset
       cd ..
 
@@ -305,8 +306,8 @@ gen_figure_7(){
       python3 plot/query/parse_property_data.py --dataset ${dataset}
     done
     cd results/figure_7
-    gnuplot ../../plot/query/plot1.gnu
-    gnuplot ../../plot/query/plot2.gnu
+    gnuplot ../../plot/query/plot3.gnu
+    gnuplot ../../plot/query/plot4.gnu
     cd ../..
 
     echo "[Success] Reproducing process of Figure 7 is completed!"
@@ -435,6 +436,7 @@ gen_table_6() {
     datasets=("cit-patents" "wiki-talk")
     for dataset in "${datasets[@]}"; do
         cd graph-baselines
+        ./prepare_data.sh $dataset
         ./tab6.sh $dataset
         cd ..
         cd AsterDB
